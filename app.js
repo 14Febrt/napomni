@@ -67,6 +67,79 @@ function plural(n, one, few, many) {
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
   return many;
 }
+
+/* --- Calendar (.ics): export + cancel. One-way: the file is a copy,
+   the phone's Calendar owns the event after import. --- */
+function icsEscape(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+}
+function icsDateLocal(dateISO, timeHM) {
+  const d = (dateISO || todayISO()).replace(/-/g, '');
+  const t = `${timeHM || '09:00'}:00`.replace(/:/g, '');
+  return `${d}T${t}`;
+}
+function icsStamp() {
+  const p = (n) => String(n).padStart(2, '0');
+  const d = new Date();
+  return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}T${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}Z`;
+}
+function calUid(it) {
+  return `${String(it.id).replace(/-/g, '')}@napomni`;
+}
+function buildICS(it, cancel = false) {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//napomni//reminder//RU',
+    cancel ? 'METHOD:CANCEL' : 'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${calUid(it)}`,
+    `DTSTAMP:${icsStamp()}`,
+    `DTSTART:${icsDateLocal(it.date, it.time)}`,
+    `SEQUENCE:${cancel ? 1 : 0}`,
+    cancel ? 'STATUS:CANCELLED' : 'STATUS:CONFIRMED',
+    `SUMMARY:${icsEscape(it.text)}`,
+    'DESCRIPTION:napomni',
+  ];
+  if (!cancel) {
+    lines.push(
+      'BEGIN:VALARM',
+      'TRIGGER:-PT0M',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:${icsEscape(it.text)}`,
+      'END:VALARM',
+    );
+  }
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+  return lines.join('\r\n');
+}
+function downloadICS(it, cancel) {
+  const blob = new Blob([buildICS(it, cancel)], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = cancel ? 'napomni-otmena.ics' : 'napomni.ics';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function exportToCalendar(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  downloadICS(it, false);
+  items = items.map(i => (i.id === id ? { ...i, cal: true } : i));
+  save(); render();
+  toast('Открой файл и нажми «Добавить»');
+}
+function cancelInCalendar(id) {
+  const it = items.find(i => i.id === id);
+  if (!it) return;
+  downloadICS(it, true);
+  toast('Открой файл — событие удалится');
+}
+const SVG_CAL_ADD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="4" y="5.5" width="16" height="15" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="M12 13.2v4.6M9.7 15.5h4.6"/></svg>';
+const SVG_CAL_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="15" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/><path d="m10.4 14.2 3.2 3.2M13.6 14.2l-3.2 3.2"/></svg>';
 function fmtDate(iso) {
   if (!iso) return '';
   const t = todayISO();
@@ -110,6 +183,13 @@ function render() {
       chip.textContent = `${fmtDate(it.date)} · ${it.time || '—'}`;
     }
     node.querySelector('.chip-cat').textContent = CATS[it.cat] || 'Дело';
+    const calBtn = node.querySelector('.cal');
+    calBtn.innerHTML = it.cal ? SVG_CAL_DEL : SVG_CAL_ADD;
+    calBtn.classList.toggle('is-in', Boolean(it.cal));
+    const calLabel = it.cal ? 'Убрать из календаря' : 'Добавить в календарь';
+    calBtn.setAttribute('aria-label', calLabel);
+    calBtn.title = calLabel;
+    calBtn.addEventListener('click', () => (it.cal ? cancelInCalendar(it.id) : exportToCalendar(it.id)));
     node.querySelector('.check').addEventListener('click', () => toggle(it.id));
     node.querySelector('.del').addEventListener('click', () => remove(it.id));
     listEl.appendChild(node);

@@ -1,5 +1,5 @@
 /* napomni SW — cache-first, monochrome offline */
-const CACHE = 'napomni-v2';
+const CACHE = 'napomni-v3';
 const ASSETS = ['./', './index.html', './styles.css', './app.js', './manifest.webmanifest', './icons/icon.svg'];
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

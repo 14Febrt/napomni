@@ -111,6 +111,11 @@ body{
   color:var(--faint);background:transparent;border:1px solid transparent}
 .del svg{width:20px;height:20px}
 .del:hover,.del:active{color:#fff;background:rgba(255,255,255,.08);border-color:var(--line-soft)}
+.cal{width:48px;height:48px;min-width:48px;border-radius:14px;display:grid;place-items:center;cursor:pointer;
+  color:var(--faint);background:transparent;border:1px solid transparent}
+.cal svg{width:20px;height:20px}
+.cal:hover,.cal:active{color:#fff;background:rgba(255,255,255,.08);border-color:var(--line-soft)}
+.cal.is-in{color:#fff;background:rgba(255,255,255,.08);border-color:var(--line)}
 
 .empty{padding:34px 22px;text-align:center;border-radius:26px;border-style:dashed}
 .empty-ring{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;
