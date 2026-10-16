@@ -17,7 +17,6 @@ const dateInput = $('#dateInput');
 
 let filter = 'all';
 let cat = 'time';
-let deferredPrompt = null;
 
 const CATS = {
   time: 'Время',
@@ -31,25 +30,14 @@ function todayISO() {
   return d.toISOString().slice(0, 10);
 }
 
-function seed() {
-  return [
-    { id: crypto.randomUUID(), text: 'Позвонить маме', time: '10:00', date: todayISO(), cat: 'star', done: false, ts: Date.now() - 3000 },
-    { id: crypto.randomUUID(), text: 'Купить продукты после работы', time: '18:30', date: todayISO(), cat: 'place', done: false, ts: Date.now() - 2000 },
-    { id: crypto.randomUUID(), text: 'Полить цветы', time: '19:00', date: todayISO(), cat: 'task', done: true, ts: Date.now() - 1000 },
-  ];
-}
-
 function load() {
   try {
     const raw = localStorage.getItem(KEY);
-    if (!raw) {
-      const s = seed();
-      localStorage.setItem(KEY, JSON.stringify(s));
-      return s;
-    }
-    return JSON.parse(raw);
+    if (!raw) return [];
+    const data = JSON.parse(raw);
+    return Array.isArray(data) ? data : [];
   } catch {
-    return seed();
+    return [];
   }
 }
 let items = load();
@@ -189,21 +177,6 @@ $('#todayBtn').addEventListener('click', () => {
   document.querySelectorAll('.seg').forEach(x => x.classList.toggle('is-active', x.dataset.filter === 'all'));
   render();
   openSheet();
-});
-
-/* PWA install */
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  deferredPrompt = e;
-});
-$('#installBtn').addEventListener('click', async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
-    deferredPrompt = null;
-  } else {
-    toast('Меню браузера → «Установить приложение»');
-  }
 });
 
 /* Notifications (best-effort, local) */
