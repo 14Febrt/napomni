@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#060607" />
+  <meta name="description" content="napomni — минималистичные повседневные напоминания. Матовое стекло, монохром, ничего лишнего." />
+  <title>napomni</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./icons/icon.svg" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Фон: тёмный матовый стеклянный градиент -->
+  <div class="bg" aria-hidden="true">
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+    <div class="bg-orb orb-c"></div>
+    <div class="bg-vignette"></div>
+    <div class="bg-grain"></div>
+  </div>
+
+  <div class="stage">
+    <!-- iPhone-контейнер -->
+    <div class="phone" role="application" aria-label="napomni — напоминания">
+      <div class="notch" aria-hidden="true"><span></span></div>
+
+      <header class="top glass-panel">
+        <div class="top-row">
+          <div>
+            <p class="eyebrow" id="todayLine">—</p>
+            <h1 class="title">napomni</h1>
+            <p class="subtitle"><span id="activeCount">0</span> активных · <span id="doneCount">0</span> готово</p>
+          </div>
+          <button class="avatar-btn" id="installBtn" aria-label="Установить приложение" title="Установить">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>
+          </button>
+        </div>
+
+        <nav class="segmented" aria-label="Фильтр">
+          <button class="seg is-active" data-filter="all">Все</button>
+          <button class="seg" data-filter="active">Активные</button>
+          <button class="seg" data-filter="done">Готово</button>
+        </nav>
+      </header>
+
+      <main class="list-wrap">
+        <div id="list" class="list"></div>
+
+        <template id="cardTpl">
+          <article class="card glass-panel">
+            <button class="check" aria-label="Отметить выполненным">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path class="tick" d="m8.6 12.2 2.5 2.5 4.3-4.9"/></svg>
+            </button>
+            <div class="card-main">
+              <p class="card-text"></p>
+              <div class="card-meta">
+                <span class="meta-chip chip-time"></span>
+                <span class="meta-chip chip-cat"></span>
+              </div>
+            </div>
+            <button class="del" aria-label="Удалить">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M6 7h12"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M8.5 7.2 9.2 19a1 1 0 0 0 1 .9h3.6a1 1 0 0 0 1-.9l.7-11.8"/><path d="M10.2 11v5M13.8 11v5"/></svg>
+            </button>
+          </article>
+        </template>
+
+        <div id="empty" class="empty glass-panel" hidden>
+          <div class="empty-ring" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+          </div>
+          <p class="empty-title">Пока тихо</p>
+          <p class="empty-sub">Нажми большую кнопку «+» внизу,<br />чтобы добавить первое напоминание</p>
+        </div>
+      </main>
+
+      <footer class="dock">
+        <div class="dock-inner glass-panel">
+          <button class="ghost-btn" id="clearDoneBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><path d="M4 7h16M9 11v6M15 11v6M7 7l1 13h8l1-13"/></svg>
+            <span>Очистить</span>
+          </button>
+          <button class="fab" id="openSheetBtn" aria-label="Добавить напоминание">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="ghost-btn" id="todayBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="4" y="5.5" width="16" height="15" rx="3"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg>
+            <span>Сегодня</span>
+          </button>
+        </div>
+        <div class="home-bar" aria-hidden="true"></div>
+      </footer>
+
+      <!-- Экран добавления: акриловая bottom-sheet панель -->
+      <div class="scrim" id="scrim" hidden></div>
+      <section class="sheet glass-panel" id="sheet" aria-hidden="true" aria-label="Новое напоминание">
+        <div class="grabber" aria-hidden="true"></div>
+        <div class="sheet-head">
+          <div>
+            <p class="eyebrow">Новое</p>
+            <h2>Напомнить</h2>
+          </div>
+          <button class="icon-btn" id="closeSheetBtn" aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Что напомнить</span>
+          <input id="textInput" type="text" maxlength="120" placeholder="Например: полить цветы в 19:00" autocomplete="off" enterkeyhint="done" />
+        </label>
+
+        <div class="field-row">
+          <label class="field half">
+            <span class="field-label">Время</span>
+            <input id="timeInput" type="time" value="19:00" />
+          </label>
+          <label class="field half">
+            <span class="field-label">Дата</span>
+            <input id="dateInput" type="date" />
+          </label>
+        </div>
+
+        <p class="field-label">Категория</p>
+        <div class="cats" role="radiogroup" aria-label="Категория">
+          <button class="cat is-active" data-cat="time" role="radio" aria-checked="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.2l2.8 1.8"/></svg>
+            <span>Время</span>
+          </button>
+          <button class="cat" data-cat="place" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6.5-5.6 6.5-10.5A6.5 6.5 0 0 0 5.5 10.5C5.5 15.4 12 21 12 21Z"/><circle cx="12" cy="10.5" r="2.3"/></svg>
+            <span>Место</span>
+          </button>
+          <button class="cat" data-cat="task" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="3.5"/><path d="m9 12.2 2.2 2.2L15.4 10"/></svg>
+            <span>Дело</span>
+          </button>
+          <button class="cat" data-cat="star" role="radio" aria-checked="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 4 2.3 4.9 5.2.6-3.9 3.6 1.1 5.1L12 15.6l-4.7 2.6 1.1-5.1L4.5 9.5l5.2-.6L12 4Z"/></svg>
+            <span>Важное</span>
+          </button>
+        </div>
+
+        <button class="primary" id="saveBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+          <span>Сохранить напоминание</span>
+        </button>
+        <p class="hint">Сохраняется на устройстве · работает офлайн</p>
+      </section>
+
+      <div class="toast glass-panel" id="toast" hidden></div>
+    </div>
+  </div>
+
+  <script src="./app.js" defer></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+    }
+  </script>
+</body>
+</html>
