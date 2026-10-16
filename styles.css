@@ -125,7 +125,7 @@ body{
 .empty-sub{font-size:14px;color:var(--muted);line-height:1.5}
 
 /* ---------- Dock / FAB ---------- */
-.dock{padding:8px 14px calc(10px + env(safe-area-inset-bottom))}
+.dock{padding:8px 14px calc(4px + env(safe-area-inset-bottom))}
 .dock-inner{display:flex;align-items:center;justify-content:space-between;gap:8px;
   padding:10px;border-radius:28px}
 .ghost-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
