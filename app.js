@@ -52,6 +52,19 @@ function isOverdue(it) {
   const d = dueTs(it);
   return !it.done && d !== null && d < Date.now();
 }
+/* Auto-done: when the due time passes, the reminder marks itself done.
+   Rationale: the calendar/phone already fired once — it won't replay. */
+function sweepOverdue() {
+  const now = Date.now();
+  let marked = 0;
+  items = items.map(it => {
+    if (it.done) return it;
+    const d = dueTs(it);
+    if (d !== null && d <= now) { marked++; return { ...it, done: true }; }
+    return it;
+  });
+  return marked;
+}
 function relPast(ts) {
   const m = Math.max(0, Math.floor((Date.now() - ts) / 60000));
   if (m < 1) return 'только что';
@@ -151,6 +164,9 @@ function fmtDate(iso) {
 }
 
 function render() {
+  const auto = sweepOverdue();
+  if (auto > 0) { save(); scheduleAll(); }
+
   const active = items.filter(i => !i.done).length;
   const done = items.filter(i => i.done).length;
   activeCount.textContent = `${active} ${plural(active, 'активное', 'активных', 'активных')}`;
@@ -194,6 +210,7 @@ function render() {
     node.querySelector('.del').addEventListener('click', () => remove(it.id));
     listEl.appendChild(node);
   }
+  if (auto > 0) toast(auto === 1 ? 'Время вышло — отмечено готовым' : `Время вышло — отмечено готовыми (${auto})`);
 }
 
 function toast(msg) {
