@@ -43,6 +43,30 @@ function load() {
 let items = load();
 function save() { localStorage.setItem(KEY, JSON.stringify(items)); }
 
+function dueTs(it) {
+  if (!it.date) return null;
+  const t = new Date(`${it.date}T${it.time || '09:00'}:00`).getTime();
+  return Number.isFinite(t) ? t : null;
+}
+function isOverdue(it) {
+  const d = dueTs(it);
+  return !it.done && d !== null && d < Date.now();
+}
+function relPast(ts) {
+  const m = Math.max(0, Math.floor((Date.now() - ts) / 60000));
+  if (m < 1) return 'только что';
+  if (m < 60) return `${m} ${plural(m, 'минуту', 'минуты', 'минут')} назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ${plural(h, 'час', 'часа', 'часов')} назад`;
+  const d = Math.floor(h / 24);
+  return `${d} ${plural(d, 'день', 'дня', 'дней')} назад`;
+}
+function plural(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+  return many;
+}
 function fmtDate(iso) {
   if (!iso) return '';
   const t = todayISO();
@@ -56,13 +80,15 @@ function fmtDate(iso) {
 function render() {
   const active = items.filter(i => !i.done).length;
   const done = items.filter(i => i.done).length;
-  activeCount.textContent = active;
-  doneCount.textContent = done;
+  activeCount.textContent = `${active} ${plural(active, 'активное', 'активных', 'активных')}`;
+  doneCount.textContent = `${done} ${plural(done, 'готовое', 'готовых', 'готовых')}`;
+  document.title = active > 0 ? `(${active}) napomni` : 'napomni';
 
   const d = new Date();
   todayLine.textContent = d.toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  let view = [...items].sort((a, b) => Number(a.done) - Number(b.done) || b.ts - a.ts);
+  const rank = (it) => (it.done ? 2 : isOverdue(it) ? 0 : 1);
+  let view = [...items].sort((a, b) => rank(a) - rank(b) || (dueTs(a) ?? Infinity) - (dueTs(b) ?? Infinity) || b.ts - a.ts);
   if (filter === 'active') view = view.filter(i => !i.done);
   if (filter === 'done') view = view.filter(i => i.done);
 
@@ -74,7 +100,15 @@ function render() {
     card.dataset.id = it.id;
     if (it.done) card.classList.add('done');
     node.querySelector('.card-text').textContent = it.text;
-    node.querySelector('.chip-time').textContent = `${fmtDate(it.date)} · ${it.time || '—'}`;
+    const chip = node.querySelector('.chip-time');
+    const due = dueTs(it);
+    if (!it.done && due !== null && due < Date.now()) {
+      card.classList.add('overdue');
+      chip.textContent = `Просрочено · ${relPast(due)}`;
+      chip.classList.add('chip-alert');
+    } else {
+      chip.textContent = `${fmtDate(it.date)} · ${it.time || '—'}`;
+    }
     node.querySelector('.chip-cat').textContent = CATS[it.cat] || 'Дело';
     node.querySelector('.check').addEventListener('click', () => toggle(it.id));
     node.querySelector('.del').addEventListener('click', () => remove(it.id));
@@ -91,11 +125,11 @@ function toast(msg) {
 
 function toggle(id) {
   items = items.map(i => (i.id === id ? { ...i, done: !i.done } : i));
-  save(); render();
+  save(); render(); scheduleAll();
 }
 function remove(id) {
   items = items.filter(i => i.id !== id);
-  save(); render();
+  save(); render(); scheduleAll();
   toast('Удалено');
 }
 
@@ -134,7 +168,8 @@ function saveNew() {
   save(); render(); closeSheet();
   textInput.value = '';
   toast('Сохранено');
-  if (Notification?.permission === 'granted') schedulePing(items[0]);
+  ensurePermission();
+  scheduleAll();
 }
 
 $('#openSheetBtn').addEventListener('click', openSheet);
@@ -179,11 +214,48 @@ $('#todayBtn').addEventListener('click', () => {
   openSheet();
 });
 
-/* Notifications (best-effort, local) */
-if ('Notification' in window && Notification.permission === 'default') {
-  Notification.requestPermission().catch(() => {});
+/* Local alarms: fire while the app is open.
+   A static site can't push to a closed app — that needs a server. */
+const timers = new Map();
+function clearTimers() {
+  for (const t of timers.values()) clearTimeout(t);
+  timers.clear();
 }
-function schedulePing() { /* placeholder: local-only, no push server */ }
+function fireAlarm(it) {
+  const cur = items.find(i => i.id === it.id);
+  if (!cur || cur.done) return;
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('napomni', {
+        body: `${cur.text}${cur.time ? ' · ' + cur.time : ''}`,
+        tag: cur.id,
+        icon: './icons/icon-192.png',
+      });
+    } catch { /* ignore */ }
+  }
+  if (navigator.vibrate) navigator.vibrate(200);
+  toast(cur.text);
+  render();
+}
+function scheduleAll() {
+  clearTimers();
+  for (const it of items) {
+    const d = dueTs(it);
+    if (it.done || d === null) continue;
+    const delay = d - Date.now();
+    if (delay <= 0 || delay > 2147483647) continue;
+    timers.set(it.id, setTimeout(() => fireAlarm(it), delay));
+  }
+}
+function ensurePermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+}
 
+ensurePermission();
 dateInput.value = todayISO();
 render();
+scheduleAll();
+setInterval(render, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
